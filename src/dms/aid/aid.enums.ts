@@ -24,6 +24,63 @@ export enum AidEducationLevel {
   OTHER = "other",
 }
 
+/** Top-level literacy branch (Educated / UnEducated). */
+export enum AidLiteracyStatus {
+  EDUCATED = "educated",
+  UNEDUCATED = "uneducated",
+}
+
+/**
+ * Second-level literacy/occupation category under literacy_status.
+ * Educated: student | job | self_employed | business | others
+ * Uneducated: skilled_laborer | laborer | self_employed | others
+ */
+export enum AidLiteracyCategory {
+  STUDENT = "student",
+  JOB = "job",
+  SELF_EMPLOYED = "self_employed",
+  BUSINESS = "business",
+  SKILLED_LABORER = "skilled_laborer",
+  LABORER = "laborer",
+  OTHERS = "others",
+}
+
+/** Property ownership type when has_land = true. */
+export enum AidPropertyType {
+  AGRI = "agri",
+  COMMERCIAL = "commercial",
+  PLOT = "plot",
+  OTHERS = "others",
+}
+
+/** Resident / housing type. */
+export enum AidResidentType {
+  OWN_HOUSE = "own_house",
+  RENTED = "rented",
+  SHAM_LOT = "sham_lot",
+}
+
+export enum AidLivestockAnimalType {
+  GOAT = "goat",
+  COW = "cow",
+  BUFFALO = "buffalo",
+}
+
+export enum AidLivestockOwnership {
+  PERSONAL = "personal",
+  SHARING = "sharing",
+}
+
+export enum AidNectaStatus {
+  CLEAR = "clear",
+  NOT_CLEAR = "not_clear",
+}
+
+export enum AidBispStatus {
+  ELIGIBLE = "eligible",
+  NOT_ELIGIBLE = "not_eligible",
+}
+
 export enum AidHouseholdRole {
   HEAD = "head",
   SPOUSE = "spouse",
@@ -50,6 +107,8 @@ export enum AidKinshipRelation {
   COUSIN = "cousin",
   GRANDFATHER = "grandfather",
   GRANDMOTHER = "grandmother",
+  MATERNAL_GRANDFATHER = "maternal_grandfather",
+  MATERNAL_GRANDMOTHER = "maternal_grandmother",
   GRANDCHILD = "grandchild",
   GUARDIAN = "guardian",
   CUSTODY_HOLDER = "custody_holder",
@@ -68,11 +127,22 @@ export enum AidWriterRelation {
 }
 
 export enum AidRequestType {
-  CASH = "cash",
-  RATION = "ration",
-  MEDICAL = "medical",
+  HEALTH = "health",
   EDUCATION = "education",
+  RATION = "ration",
+  MARRIAGE_GIFT = "marriage_gift",
+  FINANCIAL_ASSISTANCE = "financial_assistance",
+  CLEAN_WATER = "clean_water",
+  APNA_GHAR = "apna_ghar",
+  DISASTER_RELIEF = "disaster_relief",
+  KASB_SKILL_DEVELOPMENT = "kasb_skill_development",
+  SEEDS_OF_CHANGE = "seeds_of_change",
+  AAS_LAB_DIAGNOSTICS = "aas_lab_diagnostics",
+  COMMUNITY_SERVICES = "community_services",
   OTHER = "other",
+  /** @deprecated legacy values kept for existing rows */
+  CASH = "cash",
+  MEDICAL = "medical",
 }
 
 /** Overall application pipeline (list filter source of truth). */
@@ -104,4 +174,14 @@ export enum AidAttachmentContext {
   PROFILE = "profile",
   VERIFICATION = "verification",
   DELIVERY = "delivery",
+  SITE_VISIT = "site_visit",
+  MEPCO_BILL = "mepco_bill",
+  CNIC = "cnic",
+  BAY_FORM = "bay_form",
+  DEATH_CERTIFICATE = "death_certificate",
+  MARRIAGE_CERTIFICATE = "marriage_certificate",
+  EDUCATION_CERTIFICATE = "education_certificate",
+  E_STAMP_PAPER = "e_stamp_paper",
+  ZAKAT = "zakat",
+  CONSENT = "consent",
 }

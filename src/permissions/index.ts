@@ -60,6 +60,7 @@ export {
 } from "./csr-poc-permissions.constants";
 
 export {
+  AID_OVERVIEW_VIEW_GUARD,
   AID_PEOPLE_LIST_GUARD,
   AID_PEOPLE_VIEW_GUARD,
   AID_PEOPLE_CREATE_GUARD,
@@ -72,6 +73,7 @@ export {
   AID_APPLICATIONS_DELETE_GUARD,
   AID_APPLICATIONS_CEO_GUARD,
   AID_APPLICATIONS_DELIVER_GUARD,
+  AID_APPLICATIONS_BULK_VERIFY_GUARD,
 } from "./aid-permissions.constants";
 
 export {

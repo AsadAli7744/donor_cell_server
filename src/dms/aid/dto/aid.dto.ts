@@ -1,14 +1,19 @@
 import {
+  IsArray,
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
+  IsNumber,
   IsObject,
   IsOptional,
   IsString,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from "class-validator";
+import { Type } from "class-transformer";
 import {
   AidAttachmentContext,
   AidCeoApprovalStatus,
@@ -16,8 +21,14 @@ import {
   AidEducationLevel,
   AidHouseholdRole,
   AidKinshipRelation,
+  AidLiteracyCategory,
+  AidLiteracyStatus,
   AidMaritalStatus,
   AidPersonGender,
+  AidBispStatus,
+  AidNectaStatus,
+  AidPropertyType,
+  AidResidentType,
   AidRequestType,
   AidWriterRelation,
 } from "../aid.enums";
@@ -30,13 +41,42 @@ export class CreateAidPersonDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(200)
+  father_or_husband_name?: string | null;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(15)
   cnic?: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  cnic_expiry?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  name_urdu?: string | null;
 
   @IsOptional()
   @IsString()
   @MaxLength(30)
   phone?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  phone_alternate?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  photo_url?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  photo_name?: string | null;
 
   @IsOptional()
   @IsEnum(AidPersonGender)
@@ -52,16 +92,131 @@ export class CreateAidPersonDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(255)
+  vulnerability?: string | null;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(120)
   occupation?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  household_dependency?: string | null;
 
   @IsOptional()
   @IsEnum(AidEducationLevel)
   education_level?: AidEducationLevel | null;
 
   @IsOptional()
+  @IsEnum(AidLiteracyStatus)
+  literacy_status?: AidLiteracyStatus | null;
+
+  @IsOptional()
+  @IsEnum(AidLiteracyCategory)
+  literacy_category?: AidLiteracyCategory | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  student_class?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  student_class_type?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  student_class_name?: string | null;
+
+  @IsOptional()
   @IsString()
   monthly_income?: string | number | null;
+
+  @IsOptional()
+  @IsBoolean()
+  has_disability?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  disability_type?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  has_land?: boolean;
+
+  @IsOptional()
+  @IsEnum(AidPropertyType)
+  property_type?: AidPropertyType | null;
+
+  @IsOptional()
+  @IsString()
+  property_details?: string | null;
+
+  @IsOptional()
+  @IsEnum(AidResidentType)
+  resident_type?: AidResidentType | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  resident_ownership_status?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  resident_ownership_other?: string | null;
+
+  @IsOptional()
+  @IsString()
+  rented_amount?: string | number | null;
+
+  @IsOptional()
+  @IsString()
+  house_area_marla?: string | number | null;
+
+  @IsOptional()
+  @IsString()
+  house_details?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  has_livestock?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  livestock_entries?: Record<string, unknown>[] | null;
+
+  @IsOptional()
+  @IsBoolean()
+  has_vehicle?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  vehicle_type?: string | null;
+
+  @IsOptional()
+  @IsEnum(AidNectaStatus)
+  necta_status?: AidNectaStatus | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  necta_document_url?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  necta_document_name?: string | null;
+
+  @IsOptional()
+  @IsEnum(AidBispStatus)
+  bisp_status?: AidBispStatus | null;
 
   @IsOptional()
   @IsBoolean()
@@ -79,6 +234,26 @@ export class CreateAidPersonDto {
   @IsString()
   @MaxLength(100)
   city?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  province?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  district?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  tehsil?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  union_council?: string | null;
 
   @IsOptional()
   @IsString()
@@ -98,13 +273,42 @@ export class UpdateAidPersonDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(200)
+  father_or_husband_name?: string | null;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(15)
   cnic?: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  cnic_expiry?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  name_urdu?: string | null;
 
   @IsOptional()
   @IsString()
   @MaxLength(30)
   phone?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  phone_alternate?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  photo_url?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  photo_name?: string | null;
 
   @IsOptional()
   @IsEnum(AidPersonGender)
@@ -120,16 +324,131 @@ export class UpdateAidPersonDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(255)
+  vulnerability?: string | null;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(120)
   occupation?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  household_dependency?: string | null;
 
   @IsOptional()
   @IsEnum(AidEducationLevel)
   education_level?: AidEducationLevel | null;
 
   @IsOptional()
+  @IsEnum(AidLiteracyStatus)
+  literacy_status?: AidLiteracyStatus | null;
+
+  @IsOptional()
+  @IsEnum(AidLiteracyCategory)
+  literacy_category?: AidLiteracyCategory | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  student_class?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  student_class_type?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  student_class_name?: string | null;
+
+  @IsOptional()
   @IsString()
   monthly_income?: string | number | null;
+
+  @IsOptional()
+  @IsBoolean()
+  has_disability?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  disability_type?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  has_land?: boolean;
+
+  @IsOptional()
+  @IsEnum(AidPropertyType)
+  property_type?: AidPropertyType | null;
+
+  @IsOptional()
+  @IsString()
+  property_details?: string | null;
+
+  @IsOptional()
+  @IsEnum(AidResidentType)
+  resident_type?: AidResidentType | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  resident_ownership_status?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  resident_ownership_other?: string | null;
+
+  @IsOptional()
+  @IsString()
+  rented_amount?: string | number | null;
+
+  @IsOptional()
+  @IsString()
+  house_area_marla?: string | number | null;
+
+  @IsOptional()
+  @IsString()
+  house_details?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  has_livestock?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  livestock_entries?: Record<string, unknown>[] | null;
+
+  @IsOptional()
+  @IsBoolean()
+  has_vehicle?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  vehicle_type?: string | null;
+
+  @IsOptional()
+  @IsEnum(AidNectaStatus)
+  necta_status?: AidNectaStatus | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  necta_document_url?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  necta_document_name?: string | null;
+
+  @IsOptional()
+  @IsEnum(AidBispStatus)
+  bisp_status?: AidBispStatus | null;
 
   @IsOptional()
   @IsBoolean()
@@ -147,6 +466,26 @@ export class UpdateAidPersonDto {
   @IsString()
   @MaxLength(100)
   city?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  province?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  district?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  tehsil?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  union_council?: string | null;
 
   @IsOptional()
   @IsString()
@@ -276,7 +615,38 @@ export class CreateAidApplicationDto {
   @IsEnum(AidRequestType)
   requested_aid_type?: AidRequestType;
 
+  /** Education-aid intake payload (history, scholarship, questions). */
   @IsOptional()
+  @IsObject()
+  education_details?: Record<string, unknown> | null;
+
+  /** Ration-aid intake payload (persons, wheat, duration, questions). */
+  @IsOptional()
+  @IsObject()
+  ration_details?: Record<string, unknown> | null;
+
+  /** Marriage-gift intake payload (dates, nikah, relation, items). */
+  @IsOptional()
+  @IsObject()
+  marriage_gift_details?: Record<string, unknown> | null;
+
+  /** Financial-assistance intake payload (Financial Condition). */
+  @IsOptional()
+  @IsObject()
+  financial_assistance_details?: Record<string, unknown> | null;
+
+  /** Zakat Permission Letter (Urdu/English) — all applications. */
+  @IsOptional()
+  @IsObject()
+  zakat_permission?: Record<string, unknown> | null;
+
+  /** Consent Form (کنسنٹ فارم) — all applications. */
+  @IsOptional()
+  @IsObject()
+  consent_form?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
   @IsInt()
   assigned_to_user_id?: number | null;
 
@@ -315,6 +685,31 @@ export class UpdateAidApplicationDto {
   requested_aid_type?: AidRequestType;
 
   @IsOptional()
+  @IsObject()
+  education_details?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  ration_details?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  marriage_gift_details?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  financial_assistance_details?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  zakat_permission?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsObject()
+  consent_form?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
   @IsInt()
   assigned_to_user_id?: number | null;
 
@@ -329,14 +724,47 @@ export class RejectAidApplicationDto {
   rejection_reason: string;
 }
 
+export class InvestigationRecommendationDto {
+  @IsIn(["approve_as_requested", "approve_with_changes", "reject"])
+  decision: "approve_as_requested" | "approve_with_changes" | "reject";
+
+  @IsOptional()
+  @IsNumber()
+  amount?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  period_months?: number | null;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  remarks?: string | null;
+
+  /** Optional found monthly income used for after-visit score. */
+  @IsOptional()
+  @IsNumber()
+  found_monthly_income?: number | null;
+}
+
 export class VerifyAidApplicationDto {
   @IsOptional()
   @IsString()
   verification_notes?: string | null;
 
-  /** Map of checklist key → checked (true/false). Required items must be true. */
+  /**
+   * Investigation results by item key.
+   * Each value: true | { status: 'verified'|'mismatch'|'not_checked', note?: string }
+   * Required claims: verified, or mismatch with Found note (≥3 chars).
+   * Process rows: must be verified.
+   */
   @IsObject()
-  verification_checklist: Record<string, boolean>;
+  verification_checklist: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  @Type(() => InvestigationRecommendationDto)
+  recommendation?: InvestigationRecommendationDto;
 
   /** Required when beneficiary/household already received aid this year or within cooldown. */
   @IsOptional()

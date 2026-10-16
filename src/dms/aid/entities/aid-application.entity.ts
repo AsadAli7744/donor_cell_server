@@ -15,8 +15,10 @@ import { AidPerson } from "./aid-person.entity";
 @Index("idx_aid_app_status", ["status"])
 @Index("idx_aid_app_beneficiary", ["beneficiary_person_id"])
 @Index("idx_aid_app_assigned", ["assigned_to_user_id"])
+/** Application number unique per tenant (multitenant-safe). */
+@Index(["tenant_id", "application_no"], { unique: true })
 export class AidApplication extends BaseEntity {
-  @Column({ type: "varchar", length: 40, unique: true })
+  @Column({ type: "varchar", length: 40 })
   application_no: string;
 
   @Column({ type: "int" })
@@ -60,6 +62,45 @@ export class AidApplication extends BaseEntity {
   })
   requested_aid_type: AidRequestType;
 
+  /**
+   * Education aid type only:
+   * education_history[], scholarships[], income_source_before, continue_education_if_not_approved
+   */
+  @Column({ type: "jsonb", nullable: true, default: null })
+  education_details: Record<string, unknown> | null;
+
+  /**
+   * Ration aid type only:
+   * persons (male/female/kids), wheat, how_know_mtjf, arrangements, duration, alternative plan
+   */
+  @Column({ type: "jsonb", nullable: true, default: null })
+  ration_details: Record<string, unknown> | null;
+
+  /**
+   * Marriage gift aid type only:
+   * date_of_marriage, nikah status/date, bride-groom relation, earlier expenses, items
+   */
+  @Column({ type: "jsonb", nullable: true, default: null })
+  marriage_gift_details: Record<string, unknown> | null;
+
+  /**
+   * Financial assistance aid type only — Financial Condition intake
+   */
+  @Column({ type: "jsonb", nullable: true, default: null })
+  financial_assistance_details: Record<string, unknown> | null;
+
+  /**
+   * Zakat Permission Letter (اجازت نامہ برائے زکوٰۃ) — all aid types.
+   */
+  @Column({ type: "jsonb", nullable: true, default: null })
+  zakat_permission: Record<string, unknown> | null;
+
+  /**
+   * Media / donor Consent Form (کنسنٹ فارم) — all aid types.
+   */
+  @Column({ type: "jsonb", nullable: true, default: null })
+  consent_form: Record<string, unknown> | null;
+
   @Column({
     type: "enum",
     enum: AidApplicationStatus,
@@ -76,6 +117,13 @@ export class AidApplication extends BaseEntity {
   /** Home-visit checklist answers (booleans by item key). No geo/photo in this phase. */
   @Column({ type: "jsonb", nullable: true, default: null })
   verification_checklist: Record<string, unknown> | null;
+
+  /**
+   * Investigator recommendation after field visit:
+   * decision, amount, period_months, remarks, vulnerability snapshots.
+   */
+  @Column({ type: "jsonb", nullable: true, default: null })
+  investigation_recommendation: Record<string, unknown> | null;
 
   /** Required when approving/verifying despite cooldown or same-year prior success. */
   @Column({ type: "text", nullable: true, default: null })
