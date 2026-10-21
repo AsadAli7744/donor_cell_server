@@ -4,11 +4,16 @@ import {
   Column,
   OneToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { Complaint, ComplaintStatus } from "./complaint.entity";
 
 @Entity("complaint_approvals")
 export class ComplaintApproval {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 

@@ -24,12 +24,12 @@ export enum AppealCategory {
 @Entity("appeals")
 @Index("idx_appeals_status_dates", ["status", "start_at", "end_at"])
 @Index("idx_appeals_category", ["category"])
-@Index("idx_appeals_slug", ["slug"], { unique: true })
+@Index("idx_appeals_slug", ["tenant_id", "slug"], { unique: true })
 export class Appeal extends BaseEntity {
   @Column({ type: "varchar", length: 250 })
   title: string;
 
-  @Column({ type: "varchar", length: 260, unique: true })
+  @Column({ type: "varchar", length: 260 })
   slug: string;
 
   @Column({ type: "text", nullable: true })

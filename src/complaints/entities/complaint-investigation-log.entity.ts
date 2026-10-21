@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { Complaint } from "./complaint.entity";
 import { User } from "../../users/user.entity";
@@ -22,6 +23,10 @@ export enum ComplaintInvestigationAction {
 
 @Entity("complaint_investigation_logs")
 export class ComplaintInvestigationLog {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 

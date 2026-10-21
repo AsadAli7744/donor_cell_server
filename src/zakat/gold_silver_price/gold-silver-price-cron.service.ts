@@ -1,3 +1,5 @@
+import { getTenantStore } from "../../tenancy/tenant-context";
+import { TenantJobs } from "../../tenancy/tenant-jobs";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { GoldSilverPriceService } from "./gold_silver_price.service";
@@ -20,6 +22,9 @@ export class GoldSilverPriceCronService {
     timeZone: "Asia/Karachi", // Adjust to your timezone
   })
   async handleDailyPriceUpdate() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleDailyPriceUpdate());
+    }
     try {
       this.logger.log("Starting daily gold/silver price update...");
 

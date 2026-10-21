@@ -19,7 +19,7 @@ export enum EventType {
 }
 
 @Entity("events")
-@Index("idx_events_slug", ["slug"], { unique: true })
+@Index("idx_events_slug", ["tenant_id", "slug"], { unique: true })
 @Index("idx_events_status_dates", ["status", "start_at", "end_at"])
 @Index("idx_events_campaign_id", ["campaign_id"])
 @Index("idx_events_capacity", ["allowed_attendees", "attendees_count"])
@@ -27,7 +27,7 @@ export class Event extends BaseEntity {
   @Column({ type: "varchar", length: 200 })
   title: string;
 
-  @Column({ type: "varchar", length: 220, unique: true })
+  @Column({ type: "varchar", length: 220 })
   slug: string;
 
   @Column({ type: "text", nullable: true })

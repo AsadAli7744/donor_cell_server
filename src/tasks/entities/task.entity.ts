@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { User, Department } from "../../users/user.entity";
 import { TaskAttachment } from "./task-attachment.entity";
@@ -53,6 +54,10 @@ export enum RecurrenceEndType {
 
 @Entity("tasks")
 export class Task {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 

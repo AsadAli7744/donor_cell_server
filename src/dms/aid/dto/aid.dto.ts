@@ -716,12 +716,45 @@ export class UpdateAidApplicationDto {
   @IsOptional()
   @IsString()
   verification_notes?: string | null;
+
+  /**
+   * Draft investigation progress (no completeness check — use POST :id/verify to submit).
+   */
+  @IsOptional()
+  @IsObject()
+  verification_checklist?: Record<string, unknown> | null;
+
+  /** Draft investigator recommendation (saved with checklist progress). */
+  @IsOptional()
+  @IsObject()
+  investigation_recommendation?: Record<string, unknown> | null;
+
+  /** Patch beneficiary person fields (same shape as create person). */
+  @IsOptional()
+  @IsObject()
+  beneficiary?: Record<string, unknown>;
+
+  /** Patch writer person fields when writer_person_id already set. */
+  @IsOptional()
+  @IsObject()
+  writer?: Record<string, unknown>;
+
+  /** Add new family members (existing links are ignored on conflict). */
+  @IsOptional()
+  family_members?: CreateAidFamilyMemberDto[];
 }
 
 export class RejectAidApplicationDto {
   @IsString()
   @MinLength(2)
   rejection_reason: string;
+}
+
+/** Approve draft → submitted; must assign a program-department user. */
+export class ApproveDraftAidApplicationDto {
+  @Type(() => Number)
+  @IsInt()
+  assigned_to_user_id: number;
 }
 
 export class InvestigationRecommendationDto {

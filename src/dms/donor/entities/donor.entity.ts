@@ -1,4 +1,4 @@
-import { Entity, Column, OneToMany, JoinColumn, ManyToOne } from "typeorm";
+import { Entity, Column, OneToMany, JoinColumn, ManyToOne, Index } from "typeorm";
 import { BaseEntity } from "../../../utils/base_utils/entities/baseEntity";
 import { User } from "src/users/user.entity";
 
@@ -8,6 +8,7 @@ export enum DonorType {
 }
 
 @Entity("donors")
+@Index(["tenant_id", "email"], { unique: true })
 export class Donor extends BaseEntity {
   // Relationship to Donations (one donor can have many donations)
   @OneToMany("Donation", "donor")
@@ -50,7 +51,7 @@ export class Donor extends BaseEntity {
   @Column({ nullable: true })
   area_of_interest: string;
 
-  @Column({ unique: true, nullable: true })
+  @Column({ nullable: true })
   email: string;
 
   @Column({ nullable: true })

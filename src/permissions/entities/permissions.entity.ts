@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   OneToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { User } from "../../users/user.entity";
 
@@ -13,6 +14,10 @@ import { User } from "../../users/user.entity";
 export class PermissionsEntity {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
 
   @Column({ name: "user_id" })
   user_id: number;

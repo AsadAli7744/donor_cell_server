@@ -64,6 +64,8 @@ export class AuthController {
       token: result.token, // Include token for WebSocket connection
       user: result.user, // Include user data in response
       permissions: result.permissions, // Include permissions in response
+      entitlements: result.entitlements,
+      tenant: result.tenant,
     };
   }
 
@@ -125,10 +127,15 @@ export class AuthController {
         joining_date: user.joining_date,
         emergency_contact: user.emergency_contact,
         blood_group: user.blood_group,
+        tenant_id: user.tenant_id,
         ...geographic,
         geographic_scope: geographicScope,
       },
       permissions,
+      entitlements: user.tenant_id
+        ? this.authService.entitlementsFor(user.tenant_id)
+        : {},
+      tenant: user.tenant_id ? this.authService.tenantProfile(user.tenant_id) : null,
     };
   }
 }

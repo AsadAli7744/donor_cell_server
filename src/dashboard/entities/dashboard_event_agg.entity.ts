@@ -15,6 +15,10 @@ import { Event } from "../../dms/events/entities/event.entity";
 @Entity("dashboard_event_agg")
 @Index("idx_dashboard_event_agg_month", ["month_start_date"])
 export class DashboardEventAgg {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryColumn({ type: "bigint" })
   event_id: number;
 

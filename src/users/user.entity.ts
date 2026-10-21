@@ -8,6 +8,7 @@ import {
   JoinColumn,
   JoinTable,
   UpdateDateColumn,
+  Index,
 } from "typeorm";
 import { PermissionsEntity } from "../permissions/entities/permissions.entity";
 import { DonationBox } from "../dms/donation_box/entities/donation-box.entity";
@@ -65,11 +66,17 @@ export enum Department {
 }
 
 @Entity()
+@Index(["tenant_id", "email"], { unique: true })
+@Index(["tenant_id", "referral_code"], { unique: true })
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
+  @Column()
   email: string;
 
   @Column()
@@ -256,7 +263,6 @@ export class User {
     name: "referral_code",
     type: "varchar",
     length: 32,
-    unique: true,
     nullable: true,
     default: null,
   })

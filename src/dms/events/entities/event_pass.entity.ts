@@ -19,7 +19,12 @@ export enum EventPassStatus {
 @Entity("event_passes")
 @Index("idx_event_passes_event_status", ["event_id", "status"])
 @Index("idx_event_passes_used_at", ["used_at"])
+@Index(["tenant_id", "pass_code"], { unique: true })
 export class EventPass {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 
@@ -30,7 +35,7 @@ export class EventPass {
   @Column({ type: "bigint" })
   event_id: number;
 
-  @Column({ type: "varchar", length: 80, unique: true })
+  @Column({ type: "varchar", length: 80 })
   pass_code: string;
 
   @Column({

@@ -6,11 +6,16 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { User } from "../../../../users/user.entity";
 
 @Entity("kasb_training_reports")
 export class KasbTrainingReport {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn()
   id: number;
 

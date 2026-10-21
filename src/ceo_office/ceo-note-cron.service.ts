@@ -1,3 +1,5 @@
+import { getTenantStore } from "../tenancy/tenant-context";
+import { TenantJobs } from "../tenancy/tenant-jobs";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { Repository, LessThan, Not, In, Between } from "typeorm";
@@ -28,6 +30,9 @@ export class CeoNoteCronService {
     timeZone: "Asia/Karachi",
   })
   async checkOverdueNotes() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.checkOverdueNotes());
+    }
     try {
       this.logger.log("Starting overdue notes check...");
 
@@ -88,6 +93,9 @@ export class CeoNoteCronService {
     timeZone: "Asia/Karachi",
   })
   async checkUpcomingDueDates() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.checkUpcomingDueDates());
+    }
     try {
       this.logger.log("Starting due date reminder check...");
 
@@ -152,6 +160,9 @@ export class CeoNoteCronService {
     timeZone: "Asia/Karachi",
   })
   async checkWaitingResponses() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.checkWaitingResponses());
+    }
     try {
       this.logger.log("Starting waiting response check...");
 

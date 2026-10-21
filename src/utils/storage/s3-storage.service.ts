@@ -11,6 +11,7 @@ import {
   ObjectCannedACL,
 } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
+import { currentTenantId } from "../../tenancy/tenant-context";
 import {
   S3_BUCKET_PROFILE,
   S3BucketProfileId,
@@ -236,6 +237,17 @@ export class S3StorageService {
     }
   }
 
+  private buildObjectKey(prefix: string, pathSegments: string[], filePart: string) {
+    const tenantId = currentTenantId();
+    const parts = [
+      tenantId ? `tenants/${tenantId}` : null,
+      prefix,
+      ...pathSegments.map((segment) => segment.replace(/^\/|\/$/g, "")),
+      filePart,
+    ].filter(Boolean);
+    return parts.join("/");
+  }
+
   private async putObject(
     profile: ResolvedS3Profile,
     key: string,
@@ -300,12 +312,7 @@ export class S3StorageService {
       .slice(0, 80);
     const filePart = `${Date.now()}-${randomUUID().slice(0, 8)}-${safeName}`;
 
-    const parts = [
-      profile.prefix,
-      ...pathSegments.map((s) => s.replace(/^\/|\/$/g, "")),
-      filePart,
-    ].filter(Boolean);
-    const key = parts.join("/");
+    const key = this.buildObjectKey(profile.prefix, pathSegments, filePart);
 
     await this.putObject(profile, key, file.buffer, contentType);
 
@@ -338,12 +345,7 @@ export class S3StorageService {
       .slice(0, 100);
     const filePart = `${Date.now()}-${randomUUID().slice(0, 8)}-${safeName}`;
 
-    const parts = [
-      profile.prefix,
-      ...pathSegments.map((s) => s.replace(/^\/|\/$/g, "")),
-      filePart,
-    ].filter(Boolean);
-    const key = parts.join("/");
+    const key = this.buildObjectKey(profile.prefix, pathSegments, filePart);
 
     await this.putObject(profile, key, file.buffer, contentType);
 

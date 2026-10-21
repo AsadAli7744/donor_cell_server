@@ -1,9 +1,10 @@
-import { Entity, Column } from "typeorm";
+import { Entity, Column, Index } from "typeorm";
 import { BaseEntity } from "../../../utils/base_utils/entities/baseEntity";
 
 @Entity("email_templates")
+@Index(["tenant_id", "name"], { unique: true })
 export class EmailTemplate extends BaseEntity {
-  @Column({ unique: true })
+  @Column()
   name: string;
 
   @Column({ nullable: true })

@@ -38,9 +38,10 @@ export enum CollectionFrequency {
 
 @Entity("donation_boxes")
 @Index("idx_donation_box_route", ["route_id"])
+@Index(["tenant_id", "box_id_no"], { unique: true })
 export class DonationBox extends BaseEntity {
   /** External box number from field sheets (e.g. FSD-L-141). Alias: Box ID No. / Box No. */
-  @Column({ name: "box_id_no", type: "varchar", nullable: true, unique: true })
+  @Column({ name: "box_id_no", type: "varchar", nullable: true })
   box_id_no: string | null;
 
   /** Physical key number — optional; duplicates allowed across shops. */

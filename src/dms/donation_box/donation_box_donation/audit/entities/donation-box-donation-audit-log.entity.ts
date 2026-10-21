@@ -15,6 +15,10 @@ import { DonationBoxDonationAuditChange } from "../donation-box-donation-audit.t
 @Index("idx_db_donation_audit_logs_record_id", ["donation_box_donation_id"])
 @Index("idx_db_donation_audit_logs_created_at", ["created_at"])
 export class DonationBoxDonationAuditLog {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 

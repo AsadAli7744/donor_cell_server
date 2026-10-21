@@ -8,6 +8,10 @@ import {
 
 @Entity("qr_codes")
 export class QrCode {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 

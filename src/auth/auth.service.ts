@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { UsersService } from "../users/users.service";
 import { User } from "../users/user.entity";
 import { GeographicScopeService } from "../permissions/geographic-scope/geographic-scope.service";
+import { TenancyService } from "../tenancy/tenancy.service";
 
 @Injectable()
 export class AuthService {
@@ -10,6 +11,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly geographicScopeService: GeographicScopeService,
+    private readonly tenancy: TenancyService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<User> {
@@ -17,11 +19,16 @@ export class AuthService {
   }
 
   async login(user: User) {
+    if (!user.tenant_id || !this.tenancy.isActive(user.tenant_id)) {
+      throw new ForbiddenException("This organization is suspended");
+    }
+
     const payload = {
       id: user.id,
       email: user.email,
       role: user.role,
       department: user.department,
+      tenant_id: user.tenant_id,
     };
 
     // We don't need to return the token as it will be set in cookie by the controller
@@ -57,9 +64,20 @@ export class AuthService {
         is_archived: user?.is_archived,
         ...geographic,
         geographic_scope: this.geographicScopeService.toScopeSummary(scope),
+        tenant_id: user.tenant_id,
       },
-      permissions, // Include permissions in login response
+      permissions,
+      entitlements: this.tenancy.enabledModuleMap(user.tenant_id),
+      tenant: this.tenancy.getCached(user.tenant_id),
     };
+  }
+
+  entitlementsFor(tenantId: number) {
+    return this.tenancy.enabledModuleMap(tenantId);
+  }
+
+  tenantProfile(tenantId: number) {
+    return this.tenancy.getCached(tenantId) || null;
   }
 
   getGeographicContextForUser(user: User) {

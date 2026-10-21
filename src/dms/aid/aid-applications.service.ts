@@ -1,12 +1,15 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Not, Repository } from "typeorm";
-import { User } from "../../users/user.entity";
+import { PermissionsService } from "../../permissions/permissions.service";
+import { Department, User } from "../../users/user.entity";
+import { UsersService } from "../../users/users.service";
 import { S3StorageService } from "../../utils/storage/s3-storage.service";
 import {
   AidApplicationStatus,
@@ -33,6 +36,7 @@ import {
 } from "./aid-vulnerability-score";
 import { AidPeopleService } from "./aid-people.service";
 import {
+  ApproveDraftAidApplicationDto,
   CeoDecideAidApplicationDto,
   CreateAidApplicationDto,
   DeliverAidApplicationDto,
@@ -43,6 +47,7 @@ import {
 import { AidApplication } from "./entities/aid-application.entity";
 import { AidAttachment } from "./entities/aid-attachment.entity";
 import { AidHouseholdMember } from "./entities/aid-household-member.entity";
+import { AidKinshipEdge } from "./entities/aid-kinship-edge.entity";
 import { AidPerson } from "./entities/aid-person.entity";
 import {
   LOOKUP_PROFILES,
@@ -63,8 +68,61 @@ export class AidApplicationsService {
     @InjectRepository(AidHouseholdMember)
     private readonly memberRepo: Repository<AidHouseholdMember>,
     private readonly peopleService: AidPeopleService,
+    private readonly usersService: UsersService,
+    private readonly permissionsService: PermissionsService,
     private readonly s3: S3StorageService,
   ) {}
+
+  /**
+   * Investigation (checklist / verify / site-visit attach):
+   * assigned investigator, super admin, or bulk_verify (Mark all complete).
+   */
+  private async assertCanPerformInvestigation(
+    app: AidApplication,
+    user?: User,
+  ) {
+    if (!user?.id) {
+      throw new ForbiddenException("Authentication required");
+    }
+    if (Number(user.id) === -1) return;
+
+    if (
+      await this.permissionsService.hasPermission(Number(user.id), "super_admin")
+    ) {
+      return;
+    }
+    if (
+      (await this.permissionsService.hasPermission(
+        Number(user.id),
+        "program.aid_verification.bulk_verify",
+      )) ||
+      (await this.permissionsService.hasPermission(
+        Number(user.id),
+        "program.aid_applications.bulk_verify",
+      )) ||
+      (await this.permissionsService.hasPermission(
+        Number(user.id),
+        "fund_raising.aid_verification.bulk_verify",
+      )) ||
+      (await this.permissionsService.hasPermission(
+        Number(user.id),
+        "fund_raising.aid_applications.bulk_verify",
+      ))
+    ) {
+      return;
+    }
+
+    if (
+      app.assigned_to_user_id != null &&
+      Number(app.assigned_to_user_id) === Number(user.id)
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      "Only the assigned investigator, super admin, or users with Mark all complete may perform the investigation",
+    );
+  }
 
   private pickAuditActor(user: any) {
     if (!user || typeof user !== "object") return null;
@@ -147,11 +205,12 @@ export class AidApplicationsService {
           : null,
       zakat_permission: dto.zakat_permission ?? null,
       consent_form: dto.consent_form ?? null,
-      status: AidApplicationStatus.SUBMITTED,
+      status: AidApplicationStatus.DRAFT,
       ceo_approval_status: AidCeoApprovalStatus.NOT_REQUIRED,
       delivery_status: AidDeliveryStatus.NOT_STARTED,
-      assigned_to_user_id: dto.assigned_to_user_id ?? null,
-      submitted_at: new Date(),
+      // Assignment is done by the draft approver (program user), not at intake
+      assigned_to_user_id: null,
+      submitted_at: null,
       created_by: user || null,
       updated_by: user || null,
     });
@@ -174,10 +233,276 @@ export class AidApplicationsService {
     return this.findOne(saved.id);
   }
 
+  /**
+   * Pipeline stage for data-entry board (maps to AidApplicationStatus).
+   */
+  private applyStageFilter(
+    qb: ReturnType<Repository<AidApplication>["createQueryBuilder"]>,
+    stage?: string,
+  ) {
+    const s = String(stage || "").trim().toLowerCase();
+    if (!s) return;
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    switch (s) {
+      case "draft":
+        qb.andWhere("a.status = :st", { st: AidApplicationStatus.DRAFT });
+        break;
+      case "submitted":
+        qb.andWhere("a.status = :st", { st: AidApplicationStatus.SUBMITTED });
+        break;
+      case "investigation":
+        qb.andWhere("a.status = :st", {
+          st: AidApplicationStatus.UNDER_REVIEW,
+        });
+        break;
+      case "pending_approval":
+        qb.andWhere("a.status = :st", {
+          st: AidApplicationStatus.CEO_APPROVAL_REQUIRED,
+        });
+        break;
+      case "approved":
+        qb.andWhere("a.status IN (:...sts)", {
+          sts: [
+            AidApplicationStatus.SUCCESSFUL,
+            AidApplicationStatus.DELIVERED,
+          ],
+        });
+        qb.andWhere("a.updated_at >= :monthStart", { monthStart });
+        break;
+      case "returned":
+        qb.andWhere("a.status = :st", { st: AidApplicationStatus.REJECTED });
+        break;
+      default:
+        break;
+    }
+  }
+
+  private applyListFilters(
+    qb: ReturnType<Repository<AidApplication>["createQueryBuilder"]>,
+    params: {
+      search?: string;
+      requested_aid_type?: string;
+      district?: string;
+      assigned_to_user_id?: number | string;
+    },
+  ) {
+    const search = String(params.search || "").trim();
+    if (search) {
+      qb.andWhere(
+        "(a.application_no ILIKE :q OR a.title ILIKE :q OR beneficiary.full_name ILIKE :q OR beneficiary.cnic ILIKE :q OR writer.full_name ILIKE :q OR writer.cnic ILIKE :q OR hh_head.full_name ILIKE :q OR hh_head.cnic ILIKE :q)",
+        { q: `%${search}%` },
+      );
+    }
+    const aidType = String(params.requested_aid_type || "").trim();
+    if (aidType) {
+      qb.andWhere("a.requested_aid_type = :aidType", { aidType });
+    }
+    const district = String(params.district || "").trim();
+    if (district) {
+      qb.andWhere("beneficiary.district ILIKE :district", {
+        district: `%${district}%`,
+      });
+    }
+    const assignee = Number(params.assigned_to_user_id);
+    if (Number.isFinite(assignee) && assignee > 0) {
+      qb.andWhere("a.assigned_to_user_id = :assignee", { assignee });
+    }
+  }
+
+  private mapStatusToStage(status: string | null | undefined): string {
+    switch (String(status || "").toLowerCase()) {
+      case AidApplicationStatus.DRAFT:
+        return "draft";
+      case AidApplicationStatus.SUBMITTED:
+        return "submitted";
+      case AidApplicationStatus.UNDER_REVIEW:
+        return "investigation";
+      case AidApplicationStatus.CEO_APPROVAL_REQUIRED:
+        return "pending_approval";
+      case AidApplicationStatus.SUCCESSFUL:
+      case AidApplicationStatus.DELIVERED:
+        return "approved";
+      case AidApplicationStatus.REJECTED:
+        return "returned";
+      default:
+        return "submitted";
+    }
+  }
+
+  private async buildStageCounts(params: {
+    search?: string;
+    requested_aid_type?: string;
+    district?: string;
+    assigned_to_user_id?: number | string;
+  }) {
+    const base = () => {
+      const qb = this.appRepo
+        .createQueryBuilder("a")
+        .leftJoin("a.beneficiary", "beneficiary")
+        .leftJoin("a.writer", "writer")
+        .leftJoin("a.household", "household")
+        .leftJoin("household.head_person", "hh_head")
+        .where("a.is_archived = :archived", { archived: false });
+      this.applyListFilters(qb, params);
+      return qb;
+    };
+
+    const countFor = async (stage: string) => {
+      const qb = base();
+      this.applyStageFilter(qb, stage);
+      return qb.getCount();
+    };
+
+    const [
+      draft,
+      submitted,
+      investigation,
+      pending_approval,
+      approved,
+      returned,
+    ] = await Promise.all([
+      countFor("draft"),
+      countFor("submitted"),
+      countFor("investigation"),
+      countFor("pending_approval"),
+      countFor("approved"),
+      countFor("returned"),
+    ]);
+
+    return {
+      draft,
+      submitted,
+      investigation,
+      pending_approval,
+      approved,
+      returned,
+    };
+  }
+
+  /**
+   * Family Head ≠ Beneficiary. Prefer household head, then kinship edge
+   * marked "Family head", then applicant/writer (when not self), else beneficiary.
+   */
+  private pickListFamilyHead(
+    app: AidApplication,
+    kinshipHeadByBeneficiary?: Map<number, AidPerson>,
+  ): AidPerson | null {
+    const b = (app as any).beneficiary as AidPerson | null;
+    const hhHead = (app as any).household?.head_person as AidPerson | null;
+    if (hhHead?.full_name) return hhHead;
+
+    const bid = app.beneficiary_person_id;
+    if (bid && kinshipHeadByBeneficiary?.has(bid)) {
+      return kinshipHeadByBeneficiary.get(bid) || null;
+    }
+
+    const writer = (app as any).writer as AidPerson | null;
+    const rel = String(app.writer_relation || "").toLowerCase();
+    if (
+      writer?.full_name &&
+      rel &&
+      rel !== "self" &&
+      writer.id !== bid
+    ) {
+      return writer;
+    }
+    return b || null;
+  }
+
+  private async loadKinshipFamilyHeads(
+    beneficiaryIds: number[],
+  ): Promise<Map<number, AidPerson>> {
+    const map = new Map<number, AidPerson>();
+    const ids = [...new Set(beneficiaryIds.filter((id) => id > 0))];
+    if (!ids.length) return map;
+
+    const edges = await this.personRepo.manager
+      .getRepository(AidKinshipEdge)
+      .createQueryBuilder("e")
+      .leftJoinAndSelect("e.to_person", "to_person")
+      .leftJoinAndSelect("e.from_person", "from_person")
+      .where("e.is_archived = :arch", { arch: false })
+      .andWhere(
+        "(e.from_person_id IN (:...ids) OR e.to_person_id IN (:...ids))",
+        { ids },
+      )
+      .andWhere("e.notes ILIKE :q", { q: "%family head%" })
+      .getMany();
+
+    for (const edge of edges) {
+      for (const bid of ids) {
+        if (edge.from_person_id !== bid && edge.to_person_id !== bid) continue;
+        const other =
+          edge.from_person_id === bid ? edge.to_person : edge.from_person;
+        if (other?.full_name) map.set(bid, other);
+      }
+    }
+    return map;
+  }
+
+  private summarizeListRow(
+    app: AidApplication,
+    members: number,
+    kinshipHeadByBeneficiary?: Map<number, AidPerson>,
+  ): Record<string, unknown> {
+    const b = (app as any).beneficiary;
+    const head = this.pickListFamilyHead(app, kinshipHeadByBeneficiary);
+    const assigned = (app as any).assigned_to;
+    const location = [b?.tehsil || b?.city, b?.district]
+      .filter(Boolean)
+      .join(", ");
+    const vul = computeVulnerabilityScore({
+      monthly_household_income: Number(b?.monthly_income) || null,
+      household_members: members > 0 ? members : 1,
+      earners: Number(b?.monthly_income) > 0 || b?.occupation ? 1 : 0,
+      vulnerability_categories: b?.vulnerability ? [b.vulnerability] : [],
+      resident_type: b?.resident_type || null,
+      has_land: !!b?.has_land,
+      property_type: b?.property_type || null,
+      house_area_marla: Number(b?.house_area_marla) || null,
+      has_livestock: !!b?.has_livestock,
+      livestock_entries: b?.livestock_entries || null,
+      has_vehicle: !!b?.has_vehicle,
+      vehicle_type: b?.vehicle_type || null,
+      disability_count: b?.has_disability ? 1 : 0,
+      bisp_status: b?.bisp_status || null,
+      requested_aid_type: app.requested_aid_type,
+    });
+    const assignedName = assigned
+      ? [assigned.first_name, assigned.last_name].filter(Boolean).join(" ").trim() ||
+        assigned.email ||
+        null
+      : null;
+
+    return {
+      ...app,
+      created_by: this.pickAuditActor((app as any).created_by),
+      stage: this.mapStatusToStage(app.status),
+      members_count: members > 0 ? members : 1,
+      location: location || null,
+      vulnerability_pct: vul.total,
+      assigned_to_label: assignedName,
+      family_head_name: head?.full_name || b?.full_name || null,
+      family_head_cnic: head?.cnic || b?.cnic || null,
+    };
+  }
+
   async findAll(params: {
     search?: string;
     status?: string;
-    /** approvals = verified & not rejected (CEO queue + decided non-rejects) */
+    /** Pipeline stage for data-entry board cards */
+    stage?: string;
+    requested_aid_type?: string;
+    district?: string;
+    assigned_to_user_id?: number | string;
+    /**
+     * approvals = verified & not rejected (CEO queue + decided non-rejects)
+     * entry = Beneficiary Registration board (excludes drafts)
+     * drafts = Drafts board (status = draft only)
+     */
     queue?: string;
     page?: number;
     pageSize?: number;
@@ -190,7 +515,10 @@ export class AidApplicationsService {
       .createQueryBuilder("a")
       .leftJoinAndSelect("a.beneficiary", "beneficiary")
       .leftJoinAndSelect("a.writer", "writer")
+      .leftJoinAndSelect("a.household", "household")
+      .leftJoinAndSelect("household.head_person", "hh_head")
       .leftJoinAndSelect("a.assigned_to", "assigned_to")
+      .leftJoinAndSelect("a.created_by", "created_by")
       .where("a.is_archived = :archived", { archived: false });
 
     const sortField = String(params.sortField || "created_at");
@@ -209,34 +537,107 @@ export class AidApplicationsService {
       .skip((page - 1) * pageSize)
       .take(pageSize);
 
+    this.applyListFilters(qb, params);
+
+    const isEntryBoard = params.queue === "entry";
+    const isDraftsBoard = params.queue === "drafts";
+
     if (params.queue === "approvals") {
-      // After investigation: verified, and not rejected
       qb.andWhere("a.verified_at IS NOT NULL");
       qb.andWhere("a.status != :rejected", {
         rejected: AidApplicationStatus.REJECTED,
       });
+      qb.andWhere("a.status != :draft", {
+        draft: AidApplicationStatus.DRAFT,
+      });
       if (params.status) {
         qb.andWhere("a.status = :status", { status: params.status });
       }
+    } else if (isDraftsBoard) {
+      qb.andWhere("a.status = :draft", {
+        draft: AidApplicationStatus.DRAFT,
+      });
+    } else if (isEntryBoard) {
+      // Registration board: live applications only (not drafts)
+      qb.andWhere("a.status != :draft", {
+        draft: AidApplicationStatus.DRAFT,
+      });
+      if (params.stage) {
+        this.applyStageFilter(qb, params.stage);
+      } else if (params.status) {
+        qb.andWhere("a.status = :status", { status: params.status });
+      }
+    } else if (params.stage) {
+      this.applyStageFilter(qb, params.stage);
     } else if (params.status) {
       qb.andWhere("a.status = :status", { status: params.status });
+    } else {
+      // Verification Process default: hide registration drafts
+      qb.andWhere("a.status != :draft", {
+        draft: AidApplicationStatus.DRAFT,
+      });
     }
 
-    const search = String(params.search || "").trim();
-    if (search) {
-      qb.andWhere(
-        "(a.application_no ILIKE :q OR a.title ILIKE :q OR beneficiary.full_name ILIKE :q OR beneficiary.cnic ILIKE :q)",
-        { q: `%${search}%` },
-      );
+    const [rows, total] = await qb.getManyAndCount();
+
+    const householdIds = [
+      ...new Set(
+        rows
+          .map((r) => r.household_id)
+          .filter((id): id is number => id != null && id > 0),
+      ),
+    ];
+    const memberByHousehold = new Map<number, number>();
+    if (householdIds.length) {
+      const raw = await this.memberRepo
+        .createQueryBuilder("m")
+        .select("m.household_id", "household_id")
+        .addSelect("COUNT(*)", "cnt")
+        .where("m.household_id IN (:...ids)", { ids: householdIds })
+        .andWhere("m.is_archived = :arch", { arch: false })
+        .groupBy("m.household_id")
+        .getRawMany();
+      for (const row of raw) {
+        memberByHousehold.set(
+          Number(row.household_id),
+          Number(row.cnt) || 0,
+        );
+      }
     }
 
-    const [data, total] = await qb.getManyAndCount();
+    const kinshipHeads = await this.loadKinshipFamilyHeads(
+      rows.map((r) => r.beneficiary_person_id).filter(Boolean),
+    );
+
+    const data = rows.map((app) => {
+      const members =
+        (app.household_id && memberByHousehold.get(app.household_id)) || 1;
+      return this.summarizeListRow(app, members, kinshipHeads);
+    });
+
+    const stage_counts = await this.buildStageCounts(params);
+
+    const districtRows = await this.appRepo
+      .createQueryBuilder("a")
+      .innerJoin("a.beneficiary", "beneficiary")
+      .select("DISTINCT beneficiary.district", "district")
+      .where("a.is_archived = :archived", { archived: false })
+      .andWhere("beneficiary.district IS NOT NULL")
+      .andWhere("TRIM(beneficiary.district) != ''")
+      .orderBy("beneficiary.district", "ASC")
+      .getRawMany();
+    const districts = districtRows
+      .map((r) => String(r.district || "").trim())
+      .filter(Boolean);
+
     return {
       data,
       total,
       page,
       pageSize,
       totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      stage_counts,
+      filter_options: { districts },
     };
   }
 
@@ -824,6 +1225,38 @@ export class AidApplicationsService {
     ) {
       throw new BadRequestException("Cannot edit a closed application");
     }
+
+    if (
+      dto.verification_checklist !== undefined ||
+      dto.investigation_recommendation !== undefined
+    ) {
+      await this.assertCanPerformInvestigation(app, user);
+    }
+
+    if (dto.beneficiary && app.beneficiary_person_id) {
+      await this.peopleService.update(
+        app.beneficiary_person_id,
+        dto.beneficiary as any,
+        user,
+      );
+    }
+
+    if (dto.writer_person_id !== undefined) {
+      const wid = Number(dto.writer_person_id);
+      if (!Number.isFinite(wid) || wid <= 0) {
+        throw new BadRequestException("writer_person_id is invalid");
+      }
+      await this.peopleService.findOne(wid);
+      app.writer_person_id = wid;
+    }
+
+    if (dto.writer) {
+      const writerId = app.writer_person_id || app.beneficiary_person_id;
+      if (writerId) {
+        await this.peopleService.update(writerId, dto.writer as any, user);
+      }
+    }
+
     if (dto.household_id !== undefined) app.household_id = dto.household_id;
     if (dto.writer_relation !== undefined) app.writer_relation = dto.writer_relation;
     if (dto.title !== undefined) app.title = dto.title?.trim() || null;
@@ -879,15 +1312,96 @@ export class AidApplicationsService {
     if (dto.consent_form !== undefined) {
       app.consent_form = dto.consent_form;
     }
-    if (dto.assigned_to_user_id !== undefined) {
+    if (
+      dto.assigned_to_user_id !== undefined &&
+      app.status !== AidApplicationStatus.DRAFT
+    ) {
+      // Draft assignment is only set via approve-draft
       app.assigned_to_user_id = dto.assigned_to_user_id;
     }
     if (dto.verification_notes !== undefined) {
       app.verification_notes = dto.verification_notes?.trim() || null;
     }
+    if (dto.verification_checklist !== undefined) {
+      app.verification_checklist =
+        dto.verification_checklist &&
+        typeof dto.verification_checklist === "object"
+          ? dto.verification_checklist
+          : null;
+    }
+    if (dto.investigation_recommendation !== undefined) {
+      app.investigation_recommendation =
+        dto.investigation_recommendation &&
+        typeof dto.investigation_recommendation === "object"
+          ? dto.investigation_recommendation
+          : null;
+    }
     if (app.status === AidApplicationStatus.SUBMITTED) {
       app.status = AidApplicationStatus.UNDER_REVIEW;
     }
+    app.updated_by = user || null;
+    await this.appRepo.save(app);
+
+    const beneficiaryId = app.beneficiary_person_id;
+    for (const fm of dto.family_members || []) {
+      if (!fm?.relation_type || !beneficiaryId) continue;
+      const hasPerson =
+        fm.existing_person_id ||
+        (fm.person && String(fm.person.full_name || "").trim());
+      if (!hasPerson) continue;
+      try {
+        if (fm.existing_person_id && fm.person) {
+          await this.peopleService.update(
+            Number(fm.existing_person_id),
+            fm.person as any,
+            user,
+          );
+        }
+        await this.peopleService.addFamilyMember(beneficiaryId, fm, user);
+      } catch (err) {
+        if (err instanceof ConflictException) continue;
+        throw err;
+      }
+    }
+
+    return this.findOne(id);
+  }
+
+  /**
+   * Registration approval: draft → submitted (enters Verification Process).
+   * Requires assigning a program-department user as case owner.
+   */
+  async approveDraft(
+    id: number,
+    dto: ApproveDraftAidApplicationDto,
+    user?: User,
+  ) {
+    const app = await this.appRepo.findOne({
+      where: { id, is_archived: false },
+    });
+    if (!app) throw new NotFoundException(`Application #${id} not found`);
+    if (app.status !== AidApplicationStatus.DRAFT) {
+      throw new BadRequestException(
+        "Only draft applications can be approved for verification",
+      );
+    }
+
+    const assigneeId = Number(dto?.assigned_to_user_id);
+    if (!Number.isFinite(assigneeId) || assigneeId <= 0) {
+      throw new BadRequestException(
+        "assigned_to_user_id is required (program department user)",
+      );
+    }
+    const assignee = await this.usersService.findOne(assigneeId);
+    if (String(assignee.department || "").toLowerCase() !== Department.PROGRAM) {
+      throw new BadRequestException(
+        "Assignee must be a user in the program department",
+      );
+    }
+
+    app.assigned_to_user_id = assigneeId;
+    app.status = AidApplicationStatus.SUBMITTED;
+    app.submitted_at = new Date();
     app.updated_by = user || null;
     await this.appRepo.save(app);
     return this.findOne(id);
@@ -896,6 +1410,11 @@ export class AidApplicationsService {
   async reject(id: number, dto: RejectAidApplicationDto, user?: User) {
     const app = await this.appRepo.findOne({ where: { id, is_archived: false } });
     if (!app) throw new NotFoundException(`Application #${id} not found`);
+    if (app.status === AidApplicationStatus.DRAFT) {
+      throw new BadRequestException(
+        "Approve or edit the draft instead of rejecting it from verification",
+      );
+    }
     if (app.status === AidApplicationStatus.SUCCESSFUL || app.status === AidApplicationStatus.DELIVERED) {
       throw new BadRequestException("Cannot reject after success");
     }
@@ -926,6 +1445,7 @@ export class AidApplicationsService {
         "Only submitted/under_review applications can be verified",
       );
     }
+    await this.assertCanPerformInvestigation(app, user);
     const investigationItems = await this.buildInvestigationForApp(app);
     let checklistPayload: Record<string, unknown>;
     try {
@@ -1101,12 +1621,30 @@ export class AidApplicationsService {
     if (params.applicationId) {
       const exists = await this.appRepo.findOne({
         where: { id: params.applicationId, is_archived: false },
-        select: ["id"],
       });
       if (!exists) {
         throw new NotFoundException(
           `Application #${params.applicationId} not found`,
         );
+      }
+      const desc = String(params.description || "").trim();
+      const investigationAttach =
+        params.context === AidAttachmentContext.SITE_VISIT ||
+        [
+          "site_visit",
+          "need_verified",
+          "duplicates_reviewed",
+          "eligible_recommended",
+          "home_visited",
+        ].includes(desc);
+      if (
+        investigationAttach &&
+        [
+          AidApplicationStatus.SUBMITTED,
+          AidApplicationStatus.UNDER_REVIEW,
+        ].includes(exists.status)
+      ) {
+        await this.assertCanPerformInvestigation(exists, params.user);
       }
     }
     if (params.personId) {

@@ -15,6 +15,10 @@ import { DonationAuditChange } from "../donation-audit.types";
 @Index("idx_donation_audit_logs_donation_id", ["donation_id"])
 @Index("idx_donation_audit_logs_created_at", ["created_at"])
 export class DonationAuditLog {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 

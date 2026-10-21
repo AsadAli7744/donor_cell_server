@@ -14,6 +14,10 @@ import { Donor } from "../../donor/entities/donor.entity";
 @Entity("user_donors")
 @Index(["user_id", "donor_id"], { unique: true })
 export class UserDonor {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn()
   id: number;
 

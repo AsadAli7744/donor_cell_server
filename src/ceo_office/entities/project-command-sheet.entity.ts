@@ -7,6 +7,7 @@ import {
   ManyToOne,
   OneToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { User } from "../../users/user.entity";
 import { Task } from "../../tasks/entities/task.entity";
@@ -14,6 +15,10 @@ import { CeoNote } from "./ceo-note.entity";
 
 @Entity("project_command_sheets")
 export class ProjectCommandSheet {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 

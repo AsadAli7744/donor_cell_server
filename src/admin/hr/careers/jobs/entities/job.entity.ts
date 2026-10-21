@@ -19,12 +19,12 @@ export enum JobStatus {
 @Index("idx_jobs_type", ["type"])
 @Index("idx_jobs_location", ["location"])
 @Index("idx_jobs_posted_date", ["posted_date"])
-@Index("idx_jobs_slug", ["slug"], { unique: true })
+@Index("idx_jobs_slug", ["tenant_id", "slug"], { unique: true })
 export class Job extends BaseEntity {
   @Column({ type: "varchar", length: 255 })
   title: string;
 
-  @Column({ type: "varchar", length: 255, unique: true })
+  @Column({ type: "varchar", length: 255 })
   slug: string;
 
   @Column({ type: "varchar", length: 500, nullable: true })

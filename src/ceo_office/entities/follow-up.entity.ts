@@ -6,11 +6,16 @@ import {
   UpdateDateColumn,
   OneToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { CeoNote } from "./ceo-note.entity";
 
 @Entity("ceo_note_follow_ups")
 export class FollowUp {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 

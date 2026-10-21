@@ -1,3 +1,5 @@
+import { getTenantStore } from "../../tenancy/tenant-context";
+import { TenantJobs } from "../../tenancy/tenant-jobs";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { TasksService } from "../tasks.service";
@@ -10,6 +12,9 @@ export class TasksCronsService {
 
   @Cron(CronExpression.EVERY_HOUR, { timeZone: "Asia/Karachi" })
   async handleDueReminders() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleDueReminders());
+    }
     try {
       const count = await this.tasksService.processDueReminders();
       if (count > 0) {
@@ -24,6 +29,9 @@ export class TasksCronsService {
 
   @Cron(CronExpression.EVERY_HOUR, { timeZone: "Asia/Karachi" })
   async handleRecurringTaskCutoff() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleRecurringTaskCutoff());
+    }
     try {
       const count = await this.tasksService.finalizeRecurringCutoffs();
       if (count > 0) {
@@ -38,6 +46,9 @@ export class TasksCronsService {
 
   @Cron(CronExpression.EVERY_DAY_AT_1AM, { timeZone: "Asia/Karachi" })
   async handleOverdueEscalation() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleOverdueEscalation());
+    }
     try {
       const count = await this.tasksService.overdueEscalation();
       this.logger.log(`Overdue escalation processed for ${count} tasks`);
@@ -50,6 +61,9 @@ export class TasksCronsService {
 
   @Cron(CronExpression.EVERY_DAY_AT_2AM, { timeZone: "Asia/Karachi" })
   async handleRecurrence() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleRecurrence());
+    }
     try {
       const count = await this.tasksService.processRecurrence();
       if (count > 0) {

@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { User, Department } from "../../users/user.entity";
 import { ComplaintAttachment } from "./complaint-attachment.entity";
@@ -87,7 +88,12 @@ export enum ComplaintWorkflowStatus {
 }
 
 @Entity("complaints")
+@Index(["tenant_id", "complaint_code"], { unique: true })
 export class Complaint {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 
@@ -259,7 +265,7 @@ export class Complaint {
 
   /** Grievance-only fields (type = complaint, general workflow). Issues ignore these. */
 
-  @Column({ type: "varchar", length: 32, nullable: true, unique: true })
+  @Column({ type: "varchar", length: 32, nullable: true })
   complaint_code: string;
 
   @Column({

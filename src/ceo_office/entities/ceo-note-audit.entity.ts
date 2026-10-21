@@ -5,12 +5,17 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { User } from "../../users/user.entity";
 import { CeoNote } from "./ceo-note.entity";
 
 @Entity("ceo_note_audits")
 export class CeoNoteAudit {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 

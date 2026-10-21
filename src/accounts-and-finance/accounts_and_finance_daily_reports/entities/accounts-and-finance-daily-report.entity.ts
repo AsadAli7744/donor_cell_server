@@ -3,10 +3,15 @@ import {
   Column,
   PrimaryGeneratedColumn,
   CreateDateColumn,
+  Index,
 } from "typeorm";
 
 @Entity("accounts_and_finance_daily_reports")
 export class AccountsAndFinanceDailyReportEntity {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn()
   id: number;
 

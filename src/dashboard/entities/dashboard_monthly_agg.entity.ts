@@ -1,4 +1,9 @@
-import { Column, Entity, Index, PrimaryColumn } from "typeorm";
+import {
+  Column,
+  Entity,
+  Index,
+  PrimaryColumn,
+} from "typeorm";
 
 /**
  * Dashboard monthly aggregation - 1 row per month.
@@ -7,6 +12,10 @@ import { Column, Entity, Index, PrimaryColumn } from "typeorm";
 @Entity("dashboard_monthly_agg")
 @Index("idx_dashboard_monthly_agg_month", ["month_start_date"])
 export class DashboardMonthlyAgg {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   /** First day of month (e.g., 2025-06-01) - PK */
   @PrimaryColumn({ type: "date" })
   month_start_date: Date;

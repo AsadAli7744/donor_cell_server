@@ -1,4 +1,9 @@
-import { Column, Entity, Index, PrimaryColumn } from "typeorm";
+import {
+  Column,
+  Entity,
+  Index,
+  PrimaryColumn,
+} from "typeorm";
 
 /**
  * Stored donors count per month (month-wise).
@@ -7,6 +12,10 @@ import { Column, Entity, Index, PrimaryColumn } from "typeorm";
 @Entity("dashboard_donor_monthly_count")
 @Index("idx_dashboard_donor_monthly_count_month", ["month_start_date"])
 export class DashboardDonorMonthlyCount {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryColumn({ type: "date" })
   month_start_date: Date;
 

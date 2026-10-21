@@ -18,6 +18,7 @@ export class DonorAuthService {
       donor_id: donor.id,
       email: donor.email,
       role: "donor",
+      tenant_id: donor.tenant_id,
     };
     const token = await this.jwtService.signAsync(payload);
     return {

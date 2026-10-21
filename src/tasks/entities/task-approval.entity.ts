@@ -4,11 +4,16 @@ import {
   Column,
   OneToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { Task, TaskStatus } from "./task.entity";
 
 @Entity("task_approvals")
 export class TaskApproval {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 

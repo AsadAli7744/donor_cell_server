@@ -8,6 +8,9 @@ import {
 import { Reflector } from "@nestjs/core";
 import { PERMISSION_KEY } from "../decorators/require-permission.decorator";
 import { PermissionsService } from "../permissions.service";
+import { TenancyService } from "../../tenancy/tenancy.service";
+import { TENANT_MODULE_KEYS } from "../../tenancy/tenant.constants";
+import { currentTenantId } from "../../tenancy/tenant-context";
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -16,6 +19,7 @@ export class PermissionsGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly permissionsService: PermissionsService,
+    private readonly tenancy: TenancyService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -92,6 +96,12 @@ export class PermissionsGuard implements CanActivate {
         throw new ForbiddenException("Insufficient permissions");
       }
 
+      const moduleKey = this.moduleKeyFrom(requiredPermission);
+      const tenantId = currentTenantId() || Number(user.tenant_id) || null;
+      if (moduleKey && tenantId && !this.tenancy.isModuleEnabled(tenantId, moduleKey)) {
+        throw new ForbiddenException("This module is not enabled for your organization");
+      }
+
       return true;
     } catch (error) {
       if (error instanceof ForbiddenException) {
@@ -101,5 +111,16 @@ export class PermissionsGuard implements CanActivate {
       this.logger.error("Error in permissions guard:", error.stack);
       throw new ForbiddenException("Permission check failed");
     }
+  }
+
+  private moduleKeyFrom(required: string | string[]): string | null {
+    const list = Array.isArray(required) ? required : [required];
+    for (const item of list) {
+      const root = String(item).split(".")[0];
+      if (TENANT_MODULE_KEYS.includes(root as (typeof TENANT_MODULE_KEYS)[number])) {
+        return root;
+      }
+    }
+    return null;
   }
 }

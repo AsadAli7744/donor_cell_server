@@ -5,11 +5,13 @@ import { Region } from "../../regions/entities/region.entity";
 @Entity("countries")
 @Index("idx_country_code", ["code"])
 @Index("idx_country_name", ["name"])
+@Index(["tenant_id", "code"], { unique: true })
+@Index(["tenant_id", "name"], { unique: true })
 export class Country extends BaseEntity {
-  @Column({ unique: true, length: 100 })
+  @Column({ length: 100 })
   name: string;
 
-  @Column({ unique: true, length: 3 })
+  @Column({ length: 3 })
   code: string;
 
   @Column({ length: 3, default: "USD" })

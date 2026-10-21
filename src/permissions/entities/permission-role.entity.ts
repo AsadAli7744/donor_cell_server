@@ -6,8 +6,8 @@ import { BaseEntity } from "../../utils/base_utils/entities/baseEntity";
  * later user ACL edits are independent (template is not live-bound).
  */
 @Entity("permission_roles")
+@Index(["tenant_id", "name"], { unique: true })
 export class PermissionRole extends BaseEntity {
-  @Index({ unique: true })
   @Column({ type: "varchar", length: 120 })
   name: string;
 

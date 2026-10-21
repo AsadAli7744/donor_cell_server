@@ -1,3 +1,5 @@
+import { getTenantStore } from "../../tenancy/tenant-context";
+import { TenantJobs } from "../../tenancy/tenant-jobs";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { SocialMediaService } from "../../dms/social_media/social_media.service";
@@ -16,11 +18,17 @@ export class SocialPostsBufferCronService {
     timeZone: "Asia/Karachi",
   })
   async handleBufferStatusSync() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleBufferStatusSync());
+    }
     this.logger.log("Buffer social posts status sync cron started");
     await this.runSync();
   }
 
   async runSync() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.runSync());
+    }
     try {
       const result = await this.socialMediaService.syncBufferPostStatuses();
       this.logger.log(

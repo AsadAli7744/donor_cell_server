@@ -18,11 +18,12 @@ export enum CampaignStatus {
 @Index("idx_campaigns_project_id", ["project_id"])
 @Index("idx_campaigns_program_id", ["program_id"])
 @Index("idx_campaigns_sub_program_id", ["sub_program_id"])
+@Index(["tenant_id", "slug"], { unique: true })
 export class Campaign extends BaseEntity {
   @Column({ type: "varchar", length: 200 })
   title: string;
 
-  @Column({ type: "varchar", length: 220, unique: true })
+  @Column({ type: "varchar", length: 220 })
   slug: string;
 
   @Column({ type: "text", nullable: true })

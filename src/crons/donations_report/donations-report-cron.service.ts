@@ -1,3 +1,5 @@
+import { getTenantStore } from "../../tenancy/tenant-context";
+import { TenantJobs } from "../../tenancy/tenant-jobs";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { DonationsReportService } from "./donations-report.service";
@@ -19,6 +21,9 @@ export class DonationsReportCronService {
     timeZone: "Asia/Karachi",
   })
   async handleDailyReport() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleDailyReport());
+    }
     try {
       this.logger.log("Starting daily donations report generation...");
 
@@ -52,6 +57,9 @@ export class DonationsReportCronService {
     timeZone: "Asia/Karachi",
   })
   async handleWeeklyReport() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleWeeklyReport());
+    }
     try {
       this.logger.log("Starting weekly donations report generation...");
 
@@ -85,6 +93,9 @@ export class DonationsReportCronService {
     timeZone: "Asia/Karachi",
   })
   async handleMonthlyReport() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleMonthlyReport());
+    }
     try {
       this.logger.log("Starting monthly donations report generation...");
 

@@ -32,6 +32,8 @@ import {
 import { EmailService } from "../email/email.service";
 import { DataScopeService } from "../permissions/data-scope/data-scope.service";
 import { PermissionRolesService } from "../permissions/permission-roles.service";
+import { TenancyService } from "../tenancy/tenancy.service";
+import { currentTenantId } from "../tenancy/tenant-context";
 
 interface PaginationOptions {
   page: number;
@@ -59,6 +61,7 @@ export class UsersService implements OnModuleInit {
     private readonly emailService: EmailService,
     private readonly dataScopeService: DataScopeService,
     private readonly permissionRolesService: PermissionRolesService,
+    private readonly tenancy: TenancyService,
   ) {}
 
   async onModuleInit() {
@@ -186,14 +189,25 @@ export class UsersService implements OnModuleInit {
       referral_code: await this.generateUniqueReferralCode(),
     });
 
-    return await this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    const tenantId = saved.tenant_id || currentTenantId();
+    if (tenantId) {
+      await this.tenancy.ensureMembership(saved.id, tenantId, saved.role);
+    }
+    return saved;
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return await this.userRepository.findOne({
+    const users = await this.userRepository.find({
       where: { email },
       relations: ["permissions"],
     });
+    if (users.length > 1) {
+      throw new ConflictException(
+        "This email belongs to more than one organization. Use your organization site.",
+      );
+    }
+    return users[0] || null;
   }
 
   async validateUser(email: string, password: string): Promise<User> {

@@ -7,10 +7,15 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 
 @Entity("procurements_daily_reports")
 export class ProcurementsDailyReportEntity {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn()
   id: number;
 

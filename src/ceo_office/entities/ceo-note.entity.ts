@@ -10,6 +10,7 @@ import {
   OneToOne,
   JoinTable,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { User, Department } from "../../users/user.entity";
 import { Task } from "../../tasks/entities/task.entity";
@@ -56,6 +57,10 @@ export enum CeoNoteStatus {
 
 @Entity("ceo_notes")
 export class CeoNote {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 

@@ -1,3 +1,5 @@
+import { getTenantStore } from "../../tenancy/tenant-context";
+import { TenantJobs } from "../../tenancy/tenant-jobs";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { ComplaintsService } from "../complaints.service";
@@ -10,6 +12,9 @@ export class ComplaintsCronsService {
 
   @Cron(CronExpression.EVERY_HOUR, { timeZone: "Asia/Karachi" })
   async handleDueReminders() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleDueReminders());
+    }
     try {
       const count = await this.complaintsService.processDueReminders();
       if (count > 0) {
@@ -22,6 +27,9 @@ export class ComplaintsCronsService {
 
   @Cron(CronExpression.EVERY_HOUR, { timeZone: "Asia/Karachi" })
   async handleRecurringComplaintCutoff() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleRecurringComplaintCutoff());
+    }
     try {
       const count = await this.complaintsService.finalizeRecurringCutoffs();
       if (count > 0) {
@@ -34,6 +42,9 @@ export class ComplaintsCronsService {
 
   @Cron(CronExpression.EVERY_DAY_AT_1AM, { timeZone: "Asia/Karachi" })
   async handleOverdueEscalation() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleOverdueEscalation());
+    }
     try {
       const count = await this.complaintsService.overdueEscalation();
       this.logger.log(`Overdue escalation processed for ${count} complaints`);
@@ -44,6 +55,9 @@ export class ComplaintsCronsService {
 
   @Cron(CronExpression.EVERY_DAY_AT_2AM, { timeZone: "Asia/Karachi" })
   async handleRecurrence() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleRecurrence());
+    }
     try {
       const count = await this.complaintsService.processRecurrence();
       if (count > 0) {

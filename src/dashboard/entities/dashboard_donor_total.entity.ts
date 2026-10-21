@@ -1,4 +1,9 @@
-import { Column, Entity, PrimaryColumn } from "typeorm";
+import {
+  Column,
+  Entity,
+  PrimaryColumn,
+  Index,
+} from "typeorm";
 
 /**
  * Stored total donors count (all time).
@@ -6,6 +11,10 @@ import { Column, Entity, PrimaryColumn } from "typeorm";
  */
 @Entity("dashboard_donor_total")
 export class DashboardDonorTotal {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryColumn({ type: "int" })
   id: number;
 

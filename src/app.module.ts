@@ -39,6 +39,7 @@ import { KnowledgeBaseModule } from './knowledge_base/knowledge_base.module';
 import { CeoOfficeModule } from "./ceo_office/ceo-office.module";
 import { CeoComplaintsModule } from "./ceo_complaints/ceo-complaints.module";
 import { ExternalModule } from "./external/external.module";
+import { TenancyModule } from "./tenancy/tenancy.module";
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { ExternalModule } from "./external/external.module";
       },
     }),
     ScheduleModule.forRoot(), // Enable cron jobs globally
+    TenancyModule,
     StoreModule,
     ProcurementsModule,
     ProgramModule,

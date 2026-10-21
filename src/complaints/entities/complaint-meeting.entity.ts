@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { Complaint } from "./complaint.entity";
 import { User, Department } from "../../users/user.entity";
@@ -18,6 +19,10 @@ export enum ComplaintMeetingStatus {
 
 @Entity("complaint_meetings")
 export class ComplaintMeeting {
+  @Index()
+  @Column({ type: "int", name: "tenant_id", nullable: true })
+  tenant_id: number | null;
+
   @PrimaryGeneratedColumn("increment")
   id: number;
 

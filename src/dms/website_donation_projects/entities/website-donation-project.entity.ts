@@ -1,10 +1,11 @@
-import { Entity, Column, OneToMany } from "typeorm";
+import { Entity, Column, OneToMany, Index } from "typeorm";
 import { BaseEntity } from "../../../utils/base_utils/entities/baseEntity";
 import { WebsiteDonationInitiative } from "./website-donation-initiative.entity";
 
 @Entity("website_donation_projects")
+@Index(["tenant_id", "slug"], { unique: true })
 export class WebsiteDonationProject extends BaseEntity {
-  @Column({ unique: true })
+  @Column()
   slug: string;
 
   @Column()

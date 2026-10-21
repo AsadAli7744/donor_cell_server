@@ -1,3 +1,5 @@
+import { getTenantStore } from "../../tenancy/tenant-context";
+import { TenantJobs } from "../../tenancy/tenant-jobs";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -32,6 +34,9 @@ export class DmsCronsService {
     timeZone: "Asia/Karachi",
   })
   async handlePendingDonationCallCenterFollowUp() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handlePendingDonationCallCenterFollowUp());
+    }
     try {
       const result =
         await this.donationPendingFollowUpService.processPendingDonationFollowUps(
@@ -61,6 +66,9 @@ export class DmsCronsService {
     timeZone: "Asia/Karachi",
   })
   async handleDonorFollowupReminders() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleDonorFollowupReminders());
+    }
     try {
       const result = await this.donorFollowupCronService.processDailyFollowups();
       if (
@@ -92,6 +100,9 @@ export class DmsCronsService {
     timeZone: "Asia/Karachi",
   })
   async handleRecurringCampaignDonorReminders() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleRecurringCampaignDonorReminders());
+    }
     try {
       const result =
         await this.manualRecurringReminderService.processDueReminders();
@@ -114,6 +125,9 @@ export class DmsCronsService {
 
   /** @deprecated alias kept for older references */
   async handleManualRecurringDonationReminders() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleManualRecurringDonationReminders());
+    }
     return this.handleRecurringCampaignDonorReminders();
   }
 
@@ -126,6 +140,9 @@ export class DmsCronsService {
     timeZone: "Asia/Karachi",
   })
   async handleNightlyMeezanSync() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleNightlyMeezanSync());
+    }
     this.logger.log("⏰ Nightly Meezan status sync cron started");
     await this.syncMeezanDonations();
   }
@@ -139,6 +156,9 @@ export class DmsCronsService {
     timeZone: "Asia/Karachi",
   })
   async handleDailyPendingDonationsCleanup() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleDailyPendingDonationsCleanup());
+    }
     this.logger.log("⏰ Daily pending donations cleanup cron started");
     await this.cleanupPendingDonations();
   }
@@ -367,6 +387,9 @@ export class DmsCronsService {
   async runManualRecurringDonationReminders(
     options?: ProcessManualRecurringRemindersDto,
   ) {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.runManualRecurringDonationReminders(options));
+    }
     return this.manualRecurringReminderService.processMonthlyReminders({
       ...(options || {}),
       run_due: options?.run_due ?? !options?.frequency,
@@ -382,6 +405,9 @@ export class DmsCronsService {
     timeZone: "Asia/Karachi",
   })
   async handleActivateManualRecurringIntents() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleActivateManualRecurringIntents());
+    }
     try {
       const result =
         await this.donationsService.activatePendingManualRecurringIntents(100);
@@ -401,6 +427,9 @@ export class DmsCronsService {
   }
 
   async runActivateManualRecurringIntents(limit?: number) {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.runActivateManualRecurringIntents(limit));
+    }
     return this.donationsService.activatePendingManualRecurringIntents(
       limit ?? 100,
     );
@@ -416,6 +445,9 @@ export class DmsCronsService {
     timeZone: "Asia/Karachi",
   })
   async handleDmsTodosDueRecurringSpawn() {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.handleDmsTodosDueRecurringSpawn());
+    }
     try {
       const result = await this.dmsTodosService.processDueRecurringTodos();
       if (result.scanned > 0 || result.spawned > 0) {
@@ -434,6 +466,9 @@ export class DmsCronsService {
   }
 
   async runDmsTodosDueRecurringSpawn(asOfDate?: string) {
+    if (!getTenantStore()?.tenantId && TenantJobs.runner) {
+      return TenantJobs.runner.runForEachActiveTenant(() => this.runDmsTodosDueRecurringSpawn(asOfDate));
+    }
     return this.dmsTodosService.processDueRecurringTodos(asOfDate);
   }
 }

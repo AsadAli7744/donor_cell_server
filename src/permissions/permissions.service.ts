@@ -2,6 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { PermissionsEntity } from "./entities/permissions.entity";
+import { TenancyService } from "../tenancy/tenancy.service";
+import { currentTenantId } from "../tenancy/tenant-context";
 
 @Injectable()
 export class PermissionsService {
@@ -10,6 +12,7 @@ export class PermissionsService {
   constructor(
     @InjectRepository(PermissionsEntity)
     private readonly permissionsRepository: Repository<PermissionsEntity>,
+    private readonly tenancy: TenancyService,
   ) {}
 
   /**
@@ -144,8 +147,12 @@ export class PermissionsService {
         where: { user_id: userId },
       });
 
+      const tenantId = currentTenantId();
+      if (tenantId) {
+        permissions = this.tenancy.clampPermissionTree(tenantId, permissions);
+      }
+
       if (userPermission) {
-        // Update existing permissions
         userPermission.permissions = permissions;
         userPermission.updated_at = new Date();
         const saved = await this.permissionsRepository.save(userPermission);
